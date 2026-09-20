@@ -51,6 +51,7 @@ export default function SmartAssistantAndSheet({
   const [isListening, setIsListening] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [searchSheet, setSearchSheet] = useState("");
+  const [sheetFilter, setSheetFilter] = useState("all"); // 'all', 'inflow', 'outflow', 'credit'
   const [showAddRowModal, setShowAddRowModal] = useState(false);
 
   // OpenRouter Real AI Integration State
