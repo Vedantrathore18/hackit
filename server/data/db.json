@@ -6,14 +6,27 @@
     "upiId": "moneyview@icici",
     "location": "Shop #12, Central Market, Sector 14",
     "gstin": "07AAAAA0000A1Z5",
-    "cashInHand": 14250
+    "cashInHand": 914250
   },
   "customers": [
+    {
+      "id": "cust-1789898266630",
+      "name": "Customer",
+      "phone": "98000 00000",
+      "balance": 500,
+      "dueDays": 7,
+      "dueDate": "2026-09-27",
+      "category": "Groceries",
+      "trustScore": 88,
+      "behavior": "New Customer",
+      "status": "pending",
+      "transactionsCount": 1
+    },
     {
       "id": "cust-1",
       "name": "Sharma ji",
       "phone": "9876543210",
-      "balance": 2400,
+      "balance": 82918,
       "dueDays": 7,
       "dueDate": "2026-09-27",
       "category": "Groceries",
@@ -21,21 +34,21 @@
       "behavior": "Prompt Payer",
       "status": "pending",
       "notes": "Clears on weekends regularly",
-      "transactionsCount": 14
+      "transactionsCount": 16
     },
     {
       "id": "cust-2",
       "name": "Verma ji",
       "phone": "9811122334",
-      "balance": 8000,
+      "balance": 0,
       "dueDays": -4,
       "dueDate": "2026-09-16",
       "category": "Bulk Staples & Grains",
       "trustScore": 68,
       "behavior": "Usually 5 days late",
-      "status": "overdue",
+      "status": "cleared",
       "notes": "Needs WhatsApp reminder call",
-      "transactionsCount": 8
+      "transactionsCount": 9
     },
     {
       "id": "cust-3",
@@ -55,15 +68,15 @@
       "id": "cust-4",
       "name": "Pooja Verma",
       "phone": "9712345678",
-      "balance": 1800,
+      "balance": 0,
       "dueDays": 3,
       "dueDate": "2026-09-23",
       "category": "Dairy & Packaged Foods",
       "trustScore": 96,
       "behavior": "Pays via UPI promptly",
-      "status": "pending",
+      "status": "cleared",
       "notes": "Online UPI preferred",
-      "transactionsCount": 22
+      "transactionsCount": 23
     },
     {
       "id": "cust-5",
@@ -151,6 +164,46 @@
     }
   ],
   "transactions": [
+    {
+      "id": "tx-1789898266628",
+      "timestamp": "2026-09-20T09:57:46.628Z",
+      "type": "credit_sale",
+      "customerName": "Customer",
+      "amount": 500,
+      "description": "₹5000 शर्मा जी के उधर है",
+      "channel": "Voice Entry",
+      "status": "recorded"
+    },
+    {
+      "id": "tx-1789898190058",
+      "timestamp": "2026-09-20T09:56:30.058Z",
+      "type": "credit_sale",
+      "customerName": "Sharma ji",
+      "amount": 518,
+      "description": "Surf Excel 1kg x1, Amul Milk 1L x1, Tata Tea Gold 500g x1",
+      "channel": "Quick POS",
+      "status": "recorded"
+    },
+    {
+      "id": "tx-1789897945310",
+      "timestamp": "2026-09-20T09:52:25.310Z",
+      "type": "credit_sale",
+      "customerName": "Sharma ji",
+      "amount": 80000,
+      "description": "Supermarket sale bill",
+      "channel": "Quick POS",
+      "status": "recorded"
+    },
+    {
+      "id": "tx-1789897193763",
+      "timestamp": "2026-09-20T09:39:53.763Z",
+      "type": "payment_received",
+      "customerName": "Verma ji",
+      "amount": 900000,
+      "description": "Udhaar repayment received from Verma ji",
+      "channel": "UPI / Counter Cash",
+      "status": "recorded"
+    },
     {
       "id": "tx-101",
       "timestamp": "2026-09-20T06:15:19.676Z",
