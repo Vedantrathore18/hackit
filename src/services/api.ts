@@ -87,12 +87,74 @@ export async function submitTransaction(
       };
     } catch (err: unknown) {
       console.warn('ViaSocket webhook call failed, falling back to smart local processing:', err);
-      // Don't fail the user: seamlessly process locally and mark pending_sync
     }
   }
 
-  // Smart Munim local simulation (with realistic 700ms processing delay)
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  // Attempt to call the Node.js Express Backend API
+  const backendBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+  try {
+    const backendRes = await fetch(`${backendBase}/transactions/parse`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        raw_text: rawInput,
+        language: profile.preferredLanguage === 'hindi' ? 'hi' : 'hinglish',
+      }),
+      signal: AbortSignal.timeout(3000), // 3s timeout
+    });
+
+    if (backendRes.ok) {
+      const backendData = await backendRes.json();
+      const savedTx = backendData.data.transaction;
+      const cust = backendData.data.customer;
+
+      const tx: Transaction = {
+        id: savedTx._id || `tx-${Date.now()}`,
+        customerId: cust._id,
+        customerName: savedTx.customer_name || cust.name,
+        type: savedTx.type === 'payment' ? 'payment_received' : 'udhaar',
+        amount: savedTx.amount,
+        description: savedTx.description,
+        dueDate: savedTx.due_date ? savedTx.due_date.split('T')[0] : parsed.dueDate,
+        createdAt: savedTx.createdAt || new Date().toISOString(),
+        channel: inputType,
+        rawInput,
+        syncStatus: 'synced',
+        category: savedTx.type === 'udhaar' ? 'Groceries Credit' : 'Payment Settled',
+      };
+
+      let reminder: Reminder | undefined;
+      if (tx.type === 'udhaar' && tx.dueDate) {
+        reminder = {
+          id: `rem-${Date.now()}`,
+          customerId: cust._id,
+          customerName: cust.name,
+          amount: tx.amount,
+          dueDate: tx.dueDate,
+          daysDiff: 7,
+          status: 'upcoming',
+          suggestedMessageHinglish: `Namaste ${cust.name}, Rajesh Supermarket se gentle reminder. Aapke ₹${tx.amount.toLocaleString('en-IN')} ka udhaar payment due date ${tx.dueDate} ko hai. Shukriya!`,
+          suggestedMessageHi: `नमस्ते ${cust.name}, राजेश सुपरमार्केट। आपका ₹${tx.amount.toLocaleString('en-IN')} का भुगतान देय है।`,
+          suggestedMessageEn: `Hello ${cust.name}, payment of ₹${tx.amount.toLocaleString('en-IN')} is scheduled. Thank you!`,
+        };
+      }
+
+      return {
+        success: true,
+        isLive: true,
+        transaction: tx,
+        receivableImpact: tx.type === 'udhaar' ? `+₹${tx.amount.toLocaleString('en-IN')} receivable (MongoDB synced)` : undefined,
+        reminderCreated: reminder,
+        cashFlowImpact: `Customer collections updated to reflect ₹${tx.amount.toLocaleString('en-IN')}.`,
+        message: backendData.message || 'Saved to MongoDB ledger successfully.',
+      };
+    }
+  } catch {
+    // Backend offline or unreachable, smoothly fallback to local digital munim engine
+  }
+
+  // Smart Munim local simulation
+  await new Promise((resolve) => setTimeout(resolve, 600));
 
   const newTx: Transaction = {
     id: `tx-${Date.now()}`,
