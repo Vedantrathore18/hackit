@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #F8F6F0;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F2EFE8;
+  --bg-muted: #ECE8DE;
+  
+  --text-main: #1C1917;
+  --text-secondary: #57534E;
+  --text-muted: #8F887F;
+  
+  --border-subtle: #E8E3D8;
+  --border-medium: #D5CEC1;
+  
+  --emerald-main: #15803D;
+  --emerald-subtle: #DCFCE7;
+  --emerald-surface: #F0FDF4;
+  
+  --amber-main: #B45309;
+  --amber-subtle: #FEF3C7;
+  --amber-surface: #FFFBEB;
+  
+  --rose-main: #BE123C;
+  --rose-subtle: #FFE4E6;
+  --rose-surface: #FFF1F2;
+  
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D8D2C4;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B5AD9C;
+}
+
+/* Micro animations */
+@keyframes pulse-subtle {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.85; }
+}
+
+@keyframes wave-bar {
+  0%, 100% { height: 8px; }
+  50% { height: 36px; }
+}
+
+.animate-wave-1 { animation: wave-bar 0.9s ease-in-out infinite 0.1s; }
+.animate-wave-2 { animation: wave-bar 0.7s ease-in-out infinite 0.3s; }
+.animate-wave-3 { animation: wave-bar 1.1s ease-in-out infinite 0.15s; }
+.animate-wave-4 { animation: wave-bar 0.8s ease-in-out infinite 0.4s; }
+.animate-wave-5 { animation: wave-bar 1.0s ease-in-out infinite 0.25s; }
+
+/* Subtle ledger paper texture background */
+.ledger-grid {
+  background-image: radial-gradient(#DDD6C7 0.75px, transparent 0.75px);
+  background-size: 16px 16px;
+}
+
+/* Smooth glass effect without excessive blur */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
