@@ -21,8 +21,19 @@ import {
   FileSpreadsheet,
   Layers,
   ChevronRight,
-  RotateCcw
+  RotateCcw,
+  Key,
+  Cpu,
+  Zap,
+  CheckCircle2
 } from 'lucide-react';
+import { 
+  classifyTransactionWithAI, 
+  getStoredApiKey, 
+  setStoredApiKey, 
+  getStoredModel, 
+  setStoredModel 
+} from '../services/aiClassifier';
 
 export default function SmartAssistantAndSheet({
   transactions = [],
@@ -40,8 +51,20 @@ export default function SmartAssistantAndSheet({
   const [isListening, setIsListening] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [searchSheet, setSearchSheet] = useState("");
-  const [sheetFilter, setSheetFilter] = useState("all"); // 'all', 'inflow', 'outflow', 'credit'
   const [showAddRowModal, setShowAddRowModal] = useState(false);
+
+  // OpenRouter Real AI Integration State
+  const [openRouterKey, setOpenRouterKey] = useState(getStoredApiKey());
+  const [selectedModel, setSelectedModel] = useState(getStoredModel());
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState(getStoredApiKey());
+  const [testStatus, setTestStatus] = useState('idle'); // 'idle', 'testing', 'success', 'error'
+  const [testMessage, setTestMessage] = useState('');
+
+  // Sync temp key if stored changes
+  useEffect(() => {
+    setTempApiKey(openRouterKey);
+  }, [openRouterKey]);
 
   // New row form state
   const [newRowDesc, setNewRowDesc] = useState("");
@@ -240,7 +263,7 @@ export default function SmartAssistantAndSheet({
     return { intent: 'unknown' };
   };
 
-  const handleSendMessage = (textToSend) => {
+  const handleSendMessage = async (textToSend) => {
     const query = textToSend || inputText;
     if (!query.trim()) return;
 
@@ -255,25 +278,32 @@ export default function SmartAssistantAndSheet({
     setInputText("");
     setIsTyping(true);
 
-    // AI Munimji Processing
-    setTimeout(() => {
-      const parsed = parseUserInput(query);
-      let replyText = "";
-      let replyDetails = "";
+    try {
+      // Call AI Classifier (uses OpenRouter if key is present, otherwise strict local NLP)
+      const parsed = await classifyTransactionWithAI({
+        text: query,
+        customers,
+        metrics,
+        apiKey: openRouterKey,
+        model: selectedModel
+      });
+
+      let replyText = parsed.replyText || "";
+      let replyDetails = parsed.replyDetails || "";
       let actionBadge = null;
 
       if (parsed.intent === 'greeting') {
-        replyText = "Namaste Gupta ji! 🙏 Main aapka MoneyView Munimji AI Assistant hoon.\n\nAap bol kar ya likh kar store ki transactions enter kar sakte hain ya accounts check kar sakte hain:\n• 'Sharma ji ko 1500 udhaar diya'\n• 'Verma ji se 2000 cash receive hua'\n• 'Paid 450 auto fare for mandi'\n• 'Kitna udhaar baaki hai?' ya 'Shortfall kitna hai?'";
-        replyDetails = "Boliye, kya entry karni hai ya kaunsa hisab dekhna hai?";
-        actionBadge = null; // No ledger changes
+        replyText = parsed.replyText || "Namaste Gupta ji! 🙏 Main aapka MoneyView Munimji AI Assistant hoon.\n\nAap bol kar ya likh kar store ki transactions enter kar sakte hain ya accounts check kar sakte hain:\n• 'Sharma ji ko 1500 udhaar diya'\n• 'Verma ji se 2000 cash receive hua'\n• 'Paid 450 auto fare for mandi'\n• 'Kitna udhaar baaki hai?'";
+        replyDetails = parsed.replyDetails || "Boliye, kya entry karni hai ya kaunsa hisab dekhna hai?";
+        actionBadge = null; // Strictly zero ledger modifications on greetings!
       } else if (parsed.intent === 'missing_amount') {
-        replyText = "⚠️ **Kripya Amount (₹) Batayein:**\nTransaction amount batayein taaki main ledger me sahi entry kar sakoon.\n\nUdaharan: '₹450 auto fare' ya 'Sharma ji ko 1500 udhaar'.";
-        replyDetails = "Bina amount ke koi transaction record nahi hui hai.";
-        actionBadge = null; // No ledger changes
+        replyText = parsed.replyText || "⚠️ **Kripya Amount (₹) Batayein:**\nTransaction amount batayein taaki main ledger me sahi entry kar sakoon.\n\nUdaharan: '₹450 auto fare' ya 'Sharma ji ko 1500 udhaar'.";
+        replyDetails = parsed.replyDetails || "Bina amount ke koi transaction record nahi hui hai.";
+        actionBadge = null;
       } else if (parsed.intent === 'unknown') {
-        replyText = "Mujhe ye samajh nahi aaya. Kripya transaction amount (₹) aur customer ya kharche ka naam saaf batayein.\n\nJaise:\n• 'Sharma ji ko 1500 udhaar'\n• 'Verma ji se 2000 aaye'\n• 'Paid 450 auto bhada'";
-        replyDetails = "Koi entry record nahi hui hai.";
-        actionBadge = null; // No ledger changes
+        replyText = parsed.replyText || "Mujhe ye samajh nahi aaya. Kripya transaction amount (₹) aur customer ya kharche ka naam saaf batayein.\n\nJaise:\n• 'Sharma ji ko 1500 udhaar'\n• 'Verma ji se 2000 aaye'\n• 'Paid 450 auto bhada'";
+        replyDetails = parsed.replyDetails || "Koi entry record nahi hui hai.";
+        actionBadge = null;
       } else if (parsed.intent === 'query') {
         const totalUdhaar = metrics?.totalReceivables || 40900;
         const overdueAmt = metrics?.overdueAmount || 13800;
@@ -289,18 +319,17 @@ export default function SmartAssistantAndSheet({
         const custName = parsed.customer?.name || "Customer";
         onAddCredit(parsed.customer, parsed.amount, `${query} (via Munimji AI)`);
 
-        replyText = `✓ **Udhaar Record Ho Gaya:** ₹${parsed.amount.toLocaleString('en-IN')} ${custName} ke khate me add kar diya hai.`;
-        replyDetails = `Customer Udhaar balance updated • New due date scheduled (7 days)`;
-        actionBadge = "+ Udhaar Given";
+        replyText = parsed.replyText || `✓ **Udhaar Record Ho Gaya:** ₹${parsed.amount.toLocaleString('en-IN')} ${custName} ke khate me add kar diya hai.`;
+        replyDetails = parsed.replyDetails || `Customer Udhaar balance updated • New due date scheduled (7 days)`;
+        actionBadge = parsed.source === 'openrouter_ai' ? "⚡ Real AI: Udhaar Given" : "+ Udhaar Given";
       } else if (parsed.intent === 'payment_received') {
         const custName = parsed.customer?.name || "Customer";
         onRecordPayment(parsed.customer, parsed.amount);
 
-        replyText = `✓ **Payment Received:** ₹${parsed.amount.toLocaleString('en-IN')} cash/UPI ${custName} se receive hua.`;
-        replyDetails = `Counter Cash Galla increased by +₹${parsed.amount.toLocaleString('en-IN')} • Customer balance cleared in ledger!`;
-        actionBadge = "Payment Collected";
+        replyText = parsed.replyText || `✓ **Payment Received:** ₹${parsed.amount.toLocaleString('en-IN')} cash/UPI ${custName} se receive hua.`;
+        replyDetails = parsed.replyDetails || `Counter Cash Galla increased by +₹${parsed.amount.toLocaleString('en-IN')} • Customer balance cleared in ledger!`;
+        actionBadge = parsed.source === 'openrouter_ai' ? "⚡ Real AI: Payment Collected" : "Payment Collected";
       } else if (parsed.intent === 'expense') {
-        // Genuine Store Expense with valid amount
         const newTx = {
           id: `tx-ai-${Date.now()}`,
           timestamp: new Date().toISOString(),
@@ -310,14 +339,14 @@ export default function SmartAssistantAndSheet({
           description: query,
           channel: "Munimji AI Ledger",
           status: "synced",
-          category: parsed.category
+          category: parsed.category || "Store Operations"
         };
 
         onAddTransaction(newTx);
 
-        replyText = `✓ **Expense Record Ho Gaya:** -₹${parsed.amount.toLocaleString('en-IN')} (${parsed.category})`;
-        replyDetails = `Counter cash me se deduct kiya gaya • Digital Vyapar Sheet me row append ho gayi!`;
-        actionBadge = "Store Expense";
+        replyText = parsed.replyText || `✓ **Expense Record Ho Gaya:** -₹${parsed.amount.toLocaleString('en-IN')} (${parsed.category})`;
+        replyDetails = parsed.replyDetails || `Counter cash me se deduct kiya gaya • Digital Vyapar Sheet me row append ho gayi!`;
+        actionBadge = parsed.source === 'openrouter_ai' ? "⚡ Real AI: Store Expense" : "Store Expense";
       }
 
       const botMsg = {
@@ -326,12 +355,64 @@ export default function SmartAssistantAndSheet({
         time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
         text: replyText,
         details: replyDetails,
-        badge: actionBadge
+        badge: actionBadge,
+        aiEngine: parsed.source === 'openrouter_ai' ? (parsed.modelUsed?.split('/')[1] || 'OpenRouter LLM') : 'Local Engine'
       };
 
       setMessages(prev => [...prev, botMsg]);
+    } catch (err) {
+      console.error("Assistant error:", err);
+    } finally {
       setIsTyping(false);
-    }, 400);
+    }
+  };
+
+  // OpenRouter Key Management Handlers
+  const handleSaveApiKey = () => {
+    setStoredApiKey(tempApiKey);
+    setOpenRouterKey(tempApiKey);
+    setStoredModel(selectedModel);
+    setShowKeyModal(false);
+    setTestStatus('idle');
+  };
+
+  const handleClearApiKey = () => {
+    setStoredApiKey('');
+    setOpenRouterKey('');
+    setTempApiKey('');
+    setTestStatus('idle');
+    setTestMessage('');
+  };
+
+  const handleTestApiKey = async () => {
+    if (!tempApiKey.trim()) {
+      setTestStatus('error');
+      setTestMessage('Please enter an API key first.');
+      return;
+    }
+    setTestStatus('testing');
+    setTestMessage('Testing with OpenRouter model...');
+
+    try {
+      const res = await classifyTransactionWithAI({
+        text: 'Sharma ji ko 1500 udhaar diya',
+        customers,
+        metrics,
+        apiKey: tempApiKey,
+        model: selectedModel
+      });
+
+      if (res.source === 'openrouter_ai') {
+        setTestStatus('success');
+        setTestMessage(`✓ Model responded successfully! (Customer: ${res.customer?.name || 'Sharma ji'}, Amount: ₹${res.amount})`);
+      } else {
+        setTestStatus('error');
+        setTestMessage(`Fallback triggered (${res.source}). Check key validity or account balance.`);
+      }
+    } catch (err) {
+      setTestStatus('error');
+      setTestMessage(`Error: ${err.message}`);
+    }
   };
 
   // Add Direct Row to Digital Sheet
@@ -439,9 +520,27 @@ export default function SmartAssistantAndSheet({
               <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: '700' }}>
                 Munimji AI & Vyapar Sheet
               </h3>
-              <span className="status-pill success" style={{ fontSize: '0.65rem' }}>
-                <span className="status-dot green"></span> In-House Engine (Zero External Deps)
-              </span>
+              <button
+                type="button"
+                onClick={() => setShowKeyModal(true)}
+                style={{
+                  background: openRouterKey ? 'rgba(22, 163, 74, 0.15)' : 'rgba(245, 158, 11, 0.12)',
+                  border: openRouterKey ? '1px solid rgba(22, 163, 74, 0.35)' : '1px solid rgba(245, 158, 11, 0.35)',
+                  color: openRouterKey ? 'var(--emerald-text)' : '#f59e0b',
+                  borderRadius: '12px',
+                  padding: '3px 9px',
+                  fontSize: '0.65rem',
+                  fontWeight: '600',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer'
+                }}
+                title="Configure Real OpenRouter AI Engine"
+              >
+                <Cpu size={11} />
+                {openRouterKey ? `AI Active (${selectedModel.split('/')[1] || 'OpenRouter'})` : '⚡ Connect OpenRouter Key'}
+              </button>
             </div>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
               Conversational Kirana Assistant + Real-time Interactive Digital Spreadsheet
@@ -501,15 +600,31 @@ export default function SmartAssistantAndSheet({
             backgroundColor: 'var(--bg-card-subtle)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--emerald-text)' }}></div>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: openRouterKey ? 'var(--emerald-text)' : '#f59e0b' }}></div>
               <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-                Munimji AI Assistant (Hindi / English)
+                Munimji AI Assistant ({openRouterKey ? (selectedModel.split('/')[1] || 'LLM') : 'Local NLP'})
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
-                Auto-classifies into Ledger & Sheet
-              </span>
+              <button
+                type="button"
+                onClick={() => setShowKeyModal(true)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border-subtle)',
+                  color: openRouterKey ? 'var(--emerald-text)' : 'var(--text-secondary)',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-xs)',
+                  fontSize: '0.68rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title="AI Settings"
+              >
+                <Key size={11} /> {openRouterKey ? 'Model Config' : 'Add Key'}
+              </button>
               <button
                 onClick={() => setMessages([{
                   id: 'msg-1',
@@ -578,11 +693,25 @@ export default function SmartAssistantAndSheet({
                       {msg.details}
                     </div>
                   )}
-                  {msg.badge && (
-                    <div style={{ marginTop: '6px' }}>
-                      <span className="status-pill success" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
-                        ✓ {msg.badge}
-                      </span>
+                  {(msg.badge || msg.aiEngine) && (
+                    <div style={{ marginTop: '6px', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      {msg.badge && (
+                        <span className="status-pill success" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
+                          ✓ {msg.badge}
+                        </span>
+                      )}
+                      {msg.aiEngine && (
+                        <span style={{ 
+                          fontSize: '0.62rem', 
+                          padding: '1px 6px', 
+                          borderRadius: '4px',
+                          backgroundColor: msg.aiEngine.includes('Local') ? 'rgba(255,255,255,0.06)' : 'rgba(59, 130, 246, 0.18)',
+                          color: msg.aiEngine.includes('Local') ? 'var(--text-tertiary)' : '#60a5fa',
+                          border: '1px solid rgba(255,255,255,0.08)'
+                        }}>
+                          ⚡ {msg.aiEngine}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1062,6 +1191,152 @@ export default function SmartAssistantAndSheet({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* OpenRouter AI Model Configuration Modal */}
+      {showKeyModal && (
+        <div className="modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '16px'
+        }}>
+          <div className="modal-sheet-content fintech-card" style={{ width: '100%', maxWidth: '460px', padding: '22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                color: '#60a5fa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Cpu size={20} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: '700' }}>OpenRouter AI Intelligence</h4>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+                  Connect LLM for natural Hindi/Hinglish Kirana understanding
+                </span>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '10px 12px',
+              fontSize: '0.74rem',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.4,
+              margin: '12px 0'
+            }}>
+              💡 <strong>Accurate Natural Classification:</strong> Powers Munimji AI with real LLMs to easily understand greetings (without logging fake expenses), customer udhaar, cash repayments, and store transport costs.
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span>OpenRouter API Key (sk-or-v1-...)</span>
+                  {openRouterKey && <span style={{ color: 'var(--emerald-text)', fontWeight: '600' }}>✓ Key Active</span>}
+                </label>
+                <input
+                  type="password"
+                  placeholder="sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxx"
+                  value={tempApiKey}
+                  onChange={e => setTempApiKey(e.target.value)}
+                  className="fintech-input num-mono"
+                  style={{ width: '100%', fontSize: '0.8rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Select AI Model
+                </label>
+                <select
+                  value={selectedModel}
+                  onChange={e => setSelectedModel(e.target.value)}
+                  className="fintech-input"
+                  style={{ width: '100%', height: '38px', fontSize: '0.8rem' }}
+                >
+                  <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B Instruct (Recommended - Highest Accuracy)</option>
+                  <option value="google/gemini-2.0-flash-001">Google Gemini 2.0 Flash (Fastest)</option>
+                  <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B Instruct (Free Tier)</option>
+                  <option value="openai/gpt-4o-mini">OpenAI GPT-4o-mini (Balanced)</option>
+                </select>
+              </div>
+
+              {testMessage && (
+                <div style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  backgroundColor: testStatus === 'success' ? 'rgba(22, 163, 74, 0.15)' : testStatus === 'testing' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                  color: testStatus === 'success' ? 'var(--emerald-text)' : testStatus === 'testing' ? '#60a5fa' : 'var(--crimson-text)',
+                  border: `1px solid ${testStatus === 'success' ? 'rgba(22, 163, 74, 0.3)' : testStatus === 'testing' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                }}>
+                  {testMessage}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={handleTestApiKey}
+                  disabled={testStatus === 'testing'}
+                  className="btn-secondary"
+                  style={{ flex: 1, padding: '9px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  <Zap size={14} /> {testStatus === 'testing' ? 'Testing...' : 'Test Connection'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveApiKey}
+                  className="btn-primary"
+                  style={{ flex: 1.2, padding: '9px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  <CheckCircle2 size={14} /> Save & Activate
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
+                <button
+                  type="button"
+                  onClick={handleClearApiKey}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--crimson-text)',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer',
+                    padding: '4px'
+                  }}
+                >
+                  Clear Key (Use Local NLP)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowKeyModal(false)}
+                  className="btn-secondary"
+                  style={{ padding: '6px 14px', fontSize: '0.75rem' }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
