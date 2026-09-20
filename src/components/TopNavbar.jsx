@@ -21,7 +21,8 @@ export default function TopNavbar({
   language,
   onToggleLanguage,
   onToggleDemoBanner,
-  isDemoBannerOpen
+  isDemoBannerOpen,
+  backendStatus = 'connecting'
 }) {
   return (
     <header className="top-navbar">
@@ -42,6 +43,35 @@ export default function TopNavbar({
 
         {/* Action Buttons Cluster */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* Backend Status Live Pill */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: backendStatus === 'connected' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(234, 179, 8, 0.12)',
+              border: `1px solid ${backendStatus === 'connected' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
+              fontSize: '0.74rem',
+              fontWeight: '600',
+              color: backendStatus === 'connected' ? '#4ade80' : '#facc15'
+            }}
+            title={backendStatus === 'connected' ? 'Backend Live on Port 5000 (Data persisted to disk)' : 'Offline mode (LocalStorage fallback active)'}
+          >
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                backgroundColor: backendStatus === 'connected' ? '#22c55e' : '#eab308',
+                boxShadow: backendStatus === 'connected' ? '0 0 8px #22c55e' : 'none',
+                display: 'inline-block'
+              }}
+            />
+            <span>{backendStatus === 'connected' ? 'Backend Live :5000' : 'Offline Cache'}</span>
+          </div>
+
           {/* Verification Loop Toggle Button */}
           <button
             onClick={onToggleDemoBanner}
@@ -161,12 +191,21 @@ export default function TopNavbar({
                 </span>
                 <span style={{
                   fontSize: '0.62rem',
-                  padding: '1px 5px',
+                  padding: '2px 5px',
                   borderRadius: 'var(--radius-xs)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                  color: 'var(--text-secondary)'
+                  backgroundColor: backendStatus === 'connected' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                  color: backendStatus === 'connected' ? '#4ade80' : 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
                 }}>
-                  Kirana
+                  <span style={{
+                    width: '5px',
+                    height: '5px',
+                    borderRadius: '50%',
+                    backgroundColor: backendStatus === 'connected' ? '#22c55e' : '#eab308'
+                  }} />
+                  {backendStatus === 'connected' ? 'Live :5000' : 'Cache'}
                 </span>
               </div>
             </div>

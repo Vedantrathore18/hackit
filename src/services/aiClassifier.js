@@ -1,9 +1,10 @@
 // Real AI Classifier using OpenRouter API with Local NLP Fallback
 
 const DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct";
+const DEFAULT_KEY = "";
 
 export const getStoredApiKey = () => {
-  return localStorage.getItem('moneyview_openrouter_key') || import.meta.env.VITE_OPENROUTER_API_KEY || '';
+  return localStorage.getItem('moneyview_openrouter_key') || import.meta.env.VITE_OPENROUTER_API_KEY || DEFAULT_KEY;
 };
 
 export const setStoredApiKey = (key) => {

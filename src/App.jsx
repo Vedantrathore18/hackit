@@ -8,6 +8,12 @@ import {
 } from './data/initialData';
 import { parseVoiceTransaction, DEMO_SCENARIOS } from './utils/voiceParser';
 import { computeCashflowMetrics } from './utils/cashflowEngine';
+import { 
+  fetchBootstrapData, 
+  apiCreateTransaction, 
+  apiSyncAll, 
+  apiResetData 
+} from './services/api';
 
 import Sidebar from './components/Sidebar';
 import TopNavbar from './components/TopNavbar';
@@ -46,6 +52,9 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
   });
 
+  // Backend Connection Status: 'connecting' | 'connected' | 'offline'
+  const [backendStatus, setBackendStatus] = useState('connecting');
+
   // UI state
   const [language, setLanguage] = useState('en'); // en or hi
   const [activeTab, setActiveTab] = useState('pulse'); // pulse, khata, dues, suppliers, transactions, viasocket
@@ -61,7 +70,36 @@ export default function App() {
   const [lastActionText, setLastActionText] = useState("Sharma ji took ₹2,400 groceries on 7 days credit");
   const [isProcessingLoop, setIsProcessingLoop] = useState(false);
 
-  // Sync to LocalStorage
+  // 1. Initial Load: Fetch live backend database (with graceful fallback to LocalStorage)
+  useEffect(() => {
+    let isMounted = true;
+    const initData = async () => {
+      try {
+        const res = await fetchBootstrapData({
+          store: storeProfile,
+          customers,
+          suppliers,
+          transactions
+        });
+        if (!isMounted) return;
+        if (res.online && res.store) {
+          setStoreProfile(res.store);
+          setCustomers(res.customers);
+          setSuppliers(res.suppliers);
+          setTransactions(res.transactions);
+          setBackendStatus('connected');
+        } else {
+          setBackendStatus('offline');
+        }
+      } catch (e) {
+        if (isMounted) setBackendStatus('offline');
+      }
+    };
+    initData();
+    return () => { isMounted = false; };
+  }, []);
+
+  // 2. Sync to LocalStorage (Always active for offline resilience)
   useEffect(() => {
     localStorage.setItem('moneyview_store', JSON.stringify(storeProfile));
   }, [storeProfile]);
@@ -77,6 +115,21 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('moneyview_transactions', JSON.stringify(transactions));
   }, [transactions]);
+
+  // 3. Debounced Auto-sync to Node.js Backend Disk Database
+  useEffect(() => {
+    if (backendStatus === 'connected') {
+      const timer = setTimeout(() => {
+        apiSyncAll({
+          store: storeProfile,
+          customers,
+          suppliers,
+          transactions
+        });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [storeProfile, customers, suppliers, transactions, backendStatus]);
 
   // Compute live financial metrics
   const cashflowMetrics = useMemo(() => {
@@ -101,13 +154,16 @@ export default function App() {
     } catch (e) {}
   };
 
-  // Reset Data to Defaults
-  const handleResetData = () => {
+  // Reset Data to Defaults (Backend + LocalStorage)
+  const handleResetData = async () => {
     if (window.confirm("Reset all store ledger data back to defaults?")) {
       localStorage.removeItem('moneyview_store');
       localStorage.removeItem('moneyview_customers');
       localStorage.removeItem('moneyview_suppliers');
       localStorage.removeItem('moneyview_transactions');
+      try {
+        await apiResetData();
+      } catch (e) {}
       setStoreProfile(STORE_PROFILE);
       setCustomers(INITIAL_CUSTOMERS);
       setSuppliers(INITIAL_SUPPLIERS);
@@ -172,6 +228,8 @@ export default function App() {
     };
 
     setTransactions(prev => [newTx, ...prev]);
+    // Immediately persist transaction to backend REST API
+    apiCreateTransaction(newTx);
 
     if (data.type === 'credit_sale') {
       setCustomers(prev => {
@@ -323,6 +381,7 @@ export default function App() {
           onToggleLanguage={() => setLanguage(l => l === 'en' ? 'hi' : 'en')}
           onToggleDemoBanner={() => setIsDemoBannerOpen(v => !v)}
           isDemoBannerOpen={isDemoBannerOpen}
+          backendStatus={backendStatus}
         />
 
         {/* Content Body */}
