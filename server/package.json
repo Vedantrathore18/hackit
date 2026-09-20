@@ -1,28 +1,15 @@
 {
-  "name": "expenso-backend",
+  "name": "moneyview-backend",
   "version": "1.0.0",
-  "description": "Production Node.js & Express backend for Expenso (VyaparPulse) - Smart Supermarket Financial Copilot",
-  "main": "server.js",
+  "description": "MoneyView Supermarket Financial Ledger Backend API",
   "type": "module",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node server.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "mongoose": "^8.4.1",
-    "openai": "^4.51.0"
-  },
-  "keywords": [
-    "fintech",
-    "supermarket",
-    "ledger",
-    "kirana",
-    "openai",
-    "digital-munim"
-  ],
-  "author": "Expenso Team",
-  "license": "ISC"
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
 }

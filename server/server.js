@@ -1,100 +1,207 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import { connectDB } from './config/db.js';
-import { notFound, errorHandler } from './middleware/errorHandler.js';
-
-// Route imports
-import transactionRoutes from './routes/transactionRoutes.js';
-import dashboardRoutes from './routes/dashboardRoutes.js';
-import customerRoutes from './routes/customerRoutes.js';
-import reminderRoutes from './routes/reminderRoutes.js';
-
-// Load environment variables
-dotenv.config();
+import { readDb, writeDb, resetDb } from './db.js';
 
 const app = express();
-
-// Connect to Database
-connectDB();
-
-// CORS Configuration
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173',
-  process.env.FRONTEND_URL,
-].filter(Boolean);
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, Postman)
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  })
-);
-
-// Body Parsers
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Development request logger
-if (process.env.NODE_ENV !== 'production') {
-  app.use((req, res, next) => {
-    console.log(`[API] ${req.method} ${req.originalUrl}`);
-    next();
-  });
-}
-
-// Health Check Endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'online',
-    service: 'Expenso (VyaparPulse) Backend',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
-});
-
-// Mount Core API Routes
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/reminders', reminderRoutes);
-
-// Error Handling Middleware
-app.use(notFound);
-app.use(errorHandler);
-
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-  console.log(`
-=====================================================
-  EXPENSO (VyaparPulse) Backend Server Running!
-  Port:        ${PORT}
-  Environment: ${process.env.NODE_ENV || 'development'}
-  Health:      http://localhost:${PORT}/api/health
-  API Endpoints:
-    POST /api/transactions/parse  (Hero AI NLP Endpoint)
-    GET  /api/dashboard/summary   (Analytics & Insights)
-    GET  /api/customers           (Customer Directory)
-    POST /api/reminders/generate  (Hinglish WhatsApp AI)
-=====================================================
-  `);
+app.use(cors());
+app.use(express.json());
+
+// Request logger
+app.use((req, res, next) => {
+  console.log(`[API] ${req.method} ${req.url}`);
+  next();
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('[Unhandled Rejection]', err.message);
+// 1. Healthcheck
+app.get('/api/health', (req, res) => {
+  const db = readDb();
+  res.json({
+    status: 'ok',
+    service: 'MoneyView Financial Backend',
+    port: PORT,
+    timestamp: new Date().toISOString(),
+    stats: {
+      customers: db.customers.length,
+      suppliers: db.suppliers.length,
+      transactions: db.transactions.length,
+      cashInHand: db.store.cashInHand
+    }
+  });
 });
 
-export default app;
+// 2. Bootstrap (All-in-one fast load)
+app.get('/api/bootstrap', (req, res) => {
+  const db = readDb();
+  res.json({
+    store: db.store,
+    customers: db.customers,
+    suppliers: db.suppliers,
+    transactions: db.transactions
+  });
+});
+
+// 3. Store Profile
+app.get('/api/store', (req, res) => {
+  const db = readDb();
+  res.json(db.store);
+});
+
+app.put('/api/store', (req, res) => {
+  const db = readDb();
+  db.store = { ...db.store, ...req.body };
+  writeDb(db);
+  res.json(db.store);
+});
+
+// 4. Customers
+app.get('/api/customers', (req, res) => {
+  const db = readDb();
+  res.json(db.customers);
+});
+
+app.post('/api/customers', (req, res) => {
+  const db = readDb();
+  const newCustomer = {
+    id: req.body.id || `cust-${Date.now()}`,
+    name: req.body.name || 'New Customer',
+    phone: req.body.phone || '',
+    balance: Number(req.body.balance) || 0,
+    dueDays: Number(req.body.dueDays) || 7,
+    dueDate: req.body.dueDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    category: req.body.category || 'General',
+    trustScore: Number(req.body.trustScore) || 85,
+    behavior: req.body.behavior || 'Regular',
+    status: req.body.status || 'pending',
+    notes: req.body.notes || '',
+    transactionsCount: req.body.transactionsCount || 1
+  };
+
+  db.customers.unshift(newCustomer);
+  writeDb(db);
+  res.status(201).json(newCustomer);
+});
+
+app.put('/api/customers/:id', (req, res) => {
+  const db = readDb();
+  const index = db.customers.findIndex(c => c.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Customer not found' });
+  }
+
+  db.customers[index] = { ...db.customers[index], ...req.body };
+  writeDb(db);
+  res.json(db.customers[index]);
+});
+
+app.delete('/api/customers/:id', (req, res) => {
+  const db = readDb();
+  const filtered = db.customers.filter(c => c.id !== req.params.id);
+  db.customers = filtered;
+  writeDb(db);
+  res.json({ success: true, id: req.params.id });
+});
+
+// 5. Suppliers
+app.get('/api/suppliers', (req, res) => {
+  const db = readDb();
+  res.json(db.suppliers);
+});
+
+app.post('/api/suppliers', (req, res) => {
+  const db = readDb();
+  const newSupplier = {
+    id: req.body.id || `sup-${Date.now()}`,
+    name: req.body.name || 'New Supplier',
+    contact: req.body.contact || '',
+    amountDue: Number(req.body.amountDue) || 0,
+    dueDate: req.body.dueDate || new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+    items: req.body.items || '',
+    urgency: req.body.urgency || 'medium',
+    bankName: req.body.bankName || 'General Bank'
+  };
+
+  db.suppliers.push(newSupplier);
+  writeDb(db);
+  res.status(201).json(newSupplier);
+});
+
+app.put('/api/suppliers/:id', (req, res) => {
+  const db = readDb();
+  const index = db.suppliers.findIndex(s => s.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Supplier not found' });
+  }
+
+  db.suppliers[index] = { ...db.suppliers[index], ...req.body };
+  writeDb(db);
+  res.json(db.suppliers[index]);
+});
+
+app.delete('/api/suppliers/:id', (req, res) => {
+  const db = readDb();
+  db.suppliers = db.suppliers.filter(s => s.id !== req.params.id);
+  writeDb(db);
+  res.json({ success: true, id: req.params.id });
+});
+
+// 6. Transactions
+app.get('/api/transactions', (req, res) => {
+  const db = readDb();
+  res.json(db.transactions);
+});
+
+app.post('/api/transactions', (req, res) => {
+  const db = readDb();
+  const newTx = {
+    id: req.body.id || `tx-${Date.now()}`,
+    timestamp: req.body.timestamp || new Date().toISOString(),
+    type: req.body.type || 'cash_sale',
+    customerName: req.body.customerName || 'Walk-in Customer',
+    amount: Number(req.body.amount) || 0,
+    description: req.body.description || 'Transaction',
+    channel: req.body.channel || 'Direct',
+    status: req.body.status || 'recorded',
+    customerId: req.body.customerId || null,
+    supplierId: req.body.supplierId || null,
+    paymentMode: req.body.paymentMode || 'cash'
+  };
+
+  db.transactions.unshift(newTx);
+  writeDb(db);
+  res.status(201).json(newTx);
+});
+
+app.delete('/api/transactions/:id', (req, res) => {
+  const db = readDb();
+  db.transactions = db.transactions.filter(t => t.id !== req.params.id);
+  writeDb(db);
+  res.json({ success: true, id: req.params.id });
+});
+
+// 7. Bulk Sync / Save All (for full consistency sync)
+app.post('/api/sync-all', (req, res) => {
+  const db = readDb();
+  const { store, customers, suppliers, transactions } = req.body;
+  if (store) db.store = store;
+  if (customers) db.customers = customers;
+  if (suppliers) db.suppliers = suppliers;
+  if (transactions) db.transactions = transactions;
+
+  writeDb(db);
+  res.json({ success: true, message: 'All entities synchronized to disk' });
+});
+
+// 8. Reset to Seed
+app.post('/api/reset', (req, res) => {
+  const freshData = resetDb();
+  res.json({ success: true, data: freshData });
+});
+
+app.listen(PORT, () => {
+  console.log(`===============================================`);
+  console.log(`🚀 MoneyView Backend Server running on port ${PORT}`);
+  console.log(`🔗 Healthcheck: http://localhost:${PORT}/api/health`);
+  console.log(`===============================================`);
+});

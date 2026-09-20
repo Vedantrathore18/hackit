@@ -1,0 +1,258 @@
+{
+  "store": {
+    "name": "MoneyView Supermarket & Daily Needs",
+    "owner": "Ramesh Gupta",
+    "phone": "+91 98765 00000",
+    "upiId": "moneyview@icici",
+    "location": "Shop #12, Central Market, Sector 14",
+    "gstin": "07AAAAA0000A1Z5",
+    "cashInHand": 914250
+  },
+  "customers": [
+    {
+      "id": "cust-1789898266630",
+      "name": "Customer",
+      "phone": "98000 00000",
+      "balance": 500,
+      "dueDays": 7,
+      "dueDate": "2026-09-27",
+      "category": "Groceries",
+      "trustScore": 88,
+      "behavior": "New Customer",
+      "status": "pending",
+      "transactionsCount": 1
+    },
+    {
+      "id": "cust-1",
+      "name": "Sharma ji",
+      "phone": "9876543210",
+      "balance": 82918,
+      "dueDays": 7,
+      "dueDate": "2026-09-27",
+      "category": "Groceries",
+      "trustScore": 92,
+      "behavior": "Prompt Payer",
+      "status": "pending",
+      "notes": "Clears on weekends regularly",
+      "transactionsCount": 16
+    },
+    {
+      "id": "cust-2",
+      "name": "Verma ji",
+      "phone": "9811122334",
+      "balance": 0,
+      "dueDays": -4,
+      "dueDate": "2026-09-16",
+      "category": "Bulk Staples & Grains",
+      "trustScore": 68,
+      "behavior": "Usually 5 days late",
+      "status": "cleared",
+      "notes": "Needs WhatsApp reminder call",
+      "transactionsCount": 9
+    },
+    {
+      "id": "cust-3",
+      "name": "Ramesh Kumar",
+      "phone": "9899955443",
+      "balance": 3500,
+      "dueDays": 1,
+      "dueDate": "2026-09-21",
+      "category": "Daily Essentials",
+      "trustScore": 84,
+      "behavior": "Regular Customer",
+      "status": "pending",
+      "notes": "Salary credit on 1st of month",
+      "transactionsCount": 11
+    },
+    {
+      "id": "cust-4",
+      "name": "Pooja Verma",
+      "phone": "9712345678",
+      "balance": 0,
+      "dueDays": 3,
+      "dueDate": "2026-09-23",
+      "category": "Dairy & Packaged Foods",
+      "trustScore": 96,
+      "behavior": "Pays via UPI promptly",
+      "status": "cleared",
+      "notes": "Online UPI preferred",
+      "transactionsCount": 23
+    },
+    {
+      "id": "cust-5",
+      "name": "Chaudhary Saab",
+      "phone": "9988776655",
+      "balance": 10200,
+      "dueDays": 5,
+      "dueDate": "2026-09-25",
+      "category": "Edible Oils & Bulk Sugar",
+      "trustScore": 89,
+      "behavior": "Clears on 5th of month",
+      "status": "pending",
+      "notes": "Local landlord & bulk buyer",
+      "transactionsCount": 19
+    },
+    {
+      "id": "cust-6",
+      "name": "Sunil Sethi",
+      "phone": "9822334455",
+      "balance": 4100,
+      "dueDays": -7,
+      "dueDate": "2026-09-13",
+      "category": "Dry Fruits & Ghee",
+      "trustScore": 62,
+      "behavior": "Needs 2nd reminder",
+      "status": "overdue",
+      "notes": "Late payment pattern detected",
+      "transactionsCount": 5
+    },
+    {
+      "id": "cust-7",
+      "name": "Anita Devi",
+      "phone": "9877112233",
+      "balance": 8500,
+      "dueDays": 2,
+      "dueDate": "2026-09-22",
+      "category": "Spices, Pulses & Atta",
+      "trustScore": 91,
+      "behavior": "Clears in 2-3 days",
+      "status": "pending",
+      "notes": "Near street #4",
+      "transactionsCount": 16
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "sup-1",
+      "name": "Amul Dairy Distributor",
+      "contact": "+91 98100 11223",
+      "amountDue": 14500,
+      "dueDate": "2026-09-24",
+      "items": "Milk crates, Curd, Butter, Paneer",
+      "urgency": "high",
+      "bankName": "HDFC Bank"
+    },
+    {
+      "id": "sup-2",
+      "name": "ITC FMCG Supply",
+      "contact": "+91 98200 22334",
+      "amountDue": 18000,
+      "dueDate": "2026-09-25",
+      "items": "Aashirvaad Atta, Sunfeast, Sunsilk, Soap",
+      "urgency": "critical",
+      "bankName": "ICICI Bank"
+    },
+    {
+      "id": "sup-3",
+      "name": "Subzi Mandi Wholesaler",
+      "contact": "+91 98300 33445",
+      "amountDue": 5200,
+      "dueDate": "2026-09-21",
+      "items": "Potatoes, Onions, Tomatoes, Fresh Herbs",
+      "urgency": "medium",
+      "bankName": "State Bank of India"
+    },
+    {
+      "id": "sup-4",
+      "name": "Britannia & Parle Depot",
+      "contact": "+91 98400 44556",
+      "amountDue": 7800,
+      "dueDate": "2026-09-29",
+      "items": "Biscuits, Bread, Rusks, Cakes",
+      "urgency": "low",
+      "bankName": "Punjab National Bank"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "tx-1789898266628",
+      "timestamp": "2026-09-20T09:57:46.628Z",
+      "type": "credit_sale",
+      "customerName": "Customer",
+      "amount": 500,
+      "description": "₹5000 शर्मा जी के उधर है",
+      "channel": "Voice Entry",
+      "status": "recorded"
+    },
+    {
+      "id": "tx-1789898190058",
+      "timestamp": "2026-09-20T09:56:30.058Z",
+      "type": "credit_sale",
+      "customerName": "Sharma ji",
+      "amount": 518,
+      "description": "Surf Excel 1kg x1, Amul Milk 1L x1, Tata Tea Gold 500g x1",
+      "channel": "Quick POS",
+      "status": "recorded"
+    },
+    {
+      "id": "tx-1789897945310",
+      "timestamp": "2026-09-20T09:52:25.310Z",
+      "type": "credit_sale",
+      "customerName": "Sharma ji",
+      "amount": 80000,
+      "description": "Supermarket sale bill",
+      "channel": "Quick POS",
+      "status": "recorded"
+    },
+    {
+      "id": "tx-1789897193763",
+      "timestamp": "2026-09-20T09:39:53.763Z",
+      "type": "payment_received",
+      "customerName": "Verma ji",
+      "amount": 900000,
+      "description": "Udhaar repayment received from Verma ji",
+      "channel": "UPI / Counter Cash",
+      "status": "recorded"
+    },
+    {
+      "id": "tx-101",
+      "timestamp": "2026-09-20T06:15:19.676Z",
+      "type": "credit_sale",
+      "customerName": "Sharma ji",
+      "amount": 2400,
+      "description": "Groceries on 7 days credit",
+      "channel": "Voice Entry",
+      "status": "recorded"
+    },
+    {
+      "id": "tx-102",
+      "timestamp": "2026-09-20T04:15:19.676Z",
+      "type": "cash_sale",
+      "customerName": "Walk-in Customer",
+      "amount": 1250,
+      "description": "Dairy, Eggs & Bread bill",
+      "channel": "Quick POS",
+      "status": "recorded"
+    },
+    {
+      "id": "tx-103",
+      "timestamp": "2026-09-20T01:15:19.676Z",
+      "type": "payment_received",
+      "customerName": "Pooja Verma",
+      "amount": 1500,
+      "description": "Udhaar repayment via UPI",
+      "channel": "UPI / WhatsApp",
+      "status": "recorded"
+    },
+    {
+      "id": "tx-104",
+      "timestamp": "2026-09-19T21:15:19.676Z",
+      "type": "expense",
+      "customerName": "Store Operations",
+      "amount": 450,
+      "description": "Packaging poly bags & tape",
+      "channel": "Munimji AI",
+      "status": "synced"
+    },
+    {
+      "id": "tx-105",
+      "timestamp": "2026-09-19T13:15:19.676Z",
+      "type": "supplier_payment",
+      "customerName": "Amul Dairy Distributor",
+      "amount": 8000,
+      "description": "Weekly milk payment part 1",
+      "channel": "Net Banking",
+      "status": "recorded"
+    }
+  ]
+}
